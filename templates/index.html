@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Codes{% endblock %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-8">
+            <h1 class="display-6 mb-3">
+                Daily VIP Picks, Smarter Football Insights
+            </h1>
+            <p class="lead hero-subtle mb-4">
+                Track VIP predictions, compare outcomes, and now monitor live soccer matches through EasySoccerData.
+            </p>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}" class="btn btn-light btn-lg px-4">
+                    <i class="bi bi-speedometer2"></i> Open Dashboard
+                </a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-warning btn-lg px-4">
+                    <i class="bi bi-key"></i> Login with Access Key
+                </a>
+            {% endif %}
+        </div>
+        <div class="col-lg-4">
+            <div class="card glass-card mb-0">
+                <div class="card-body">
+                    <h5 class="mb-3"><i class="bi bi-lightning-charge-fill text-warning"></i> What is New</h5>
+                    <p class="mb-1">Live football feed powered by EasySoccerData</p>
+                    <p class="mb-1">Match detail view for goals, events, and stats</p>
+                    <p class="mb-0">Refreshed dashboard and cleaner admin pages</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-star-fill text-warning" style="font-size: 2.4rem;"></i>
+                <h5 class="card-title mt-3">VIP Predictions</h5>
+                <p class="card-text">Regular VIP picks with actionable odds and outcome tracking.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-dice-6-fill text-primary" style="font-size: 2.4rem;"></i>
+                <h5 class="card-title mt-3">Correct Score</h5>
+                <p class="card-text">Dedicated exact-score prediction data for deeper bet strategy.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-broadcast text-success" style="font-size: 2.4rem;"></i>
+                <h5 class="card-title mt-3">Live Soccer Center</h5>
+                <p class="card-text">New live match monitor and detailed match view powered by EasySoccerData.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-success mt-4">
+    <i class="bi bi-whatsapp"></i>
+    Join our WhatsApp group:
+    <a href="https://chat.whatsapp.com/FIInZPDiOxC02o3ilYLDQw" target="_blank" class="alert-link">
+        VIP WhatsApp Group
+    </a>
+</div>
+{% endblock %}

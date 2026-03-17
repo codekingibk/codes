@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-md-8">
+            <h2 class="mb-2"><i class="bi bi-shield-lock"></i> Admin Control Center</h2>
+            <p class="hero-subtle mb-0">Manage users, monitor activity, and access all game tools from one place.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('admin_users') }}" class="btn btn-light">
+                <i class="bi bi-people"></i> Manage Users
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card stat-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-people"></i> Total Users</h5>
+                <h2>{{ stats.total_users }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card stat-success text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-person-plus"></i> New Today</h5>
+                <h2>{{ stats.new_today }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card stat-info text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-bell"></i> Notifications Active</h5>
+                <h2>{{ stats.active_notifications }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Admin Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group admin-list-group">
+                    <a href="{{ url_for('admin_users') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <i class="bi bi-people"></i> Manage Users
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('admin_games') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <i class="bi bi-trophy"></i> View All Games
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                    <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" onclick="createUser()">
+                        <i class="bi bi-person-plus"></i> Create New User
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('admin_games') }}?date=today" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar-day"></i> View Today's Games
+                    </a>
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-outline-success">
+                        <i class="bi bi-person-badge"></i> Manage Users
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function createUser() {
+    const username = prompt("Enter username:");
+    if (!username) return;
+    
+    const password = prompt("Enter password:");
+    if (!password) return;
+    
+    const isAdmin = confirm("Make this user an admin?");
+    
+    fetch('/admin/user/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, password, is_admin: isAdmin})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`User created!\n\nLogin Key: ${data.login_key}\n\nSave this key!`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-md-8">
+            <h2 class="mb-2"><i class="bi bi-people"></i> User Management</h2>
+            <p class="hero-subtle mb-0">Create, manage, and secure access keys from a single admin view.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <button class="btn btn-light" onclick="createUser()">
+                <i class="bi bi-person-plus"></i> Create New User
+            </button>
+        </div>
+    </div>
+</section>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-people"></i> User Management</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div class="text-muted">Total accounts: <strong>{{ users|length }}</strong></div>
+                    <button class="btn btn-success" onclick="createUser()">
+                        <i class="bi bi-person-plus"></i> Create New User
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Login Key</th>
+                                <th>Admin</th>
+                                <th>Notifications</th>
+                                <th>Created</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>
+                                    <code>{{ user.login_key }}</code>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('{{ user.login_key }}')">
+                                        <i class="bi bi-files"></i>
+                                    </button>
+                                </td>
+                                <td>
+                                    {% if user.is_admin %}
+                                        <span class="badge bg-danger">Admin</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">User</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.notifications_enabled %}
+                                        <span class="badge bg-success">Enabled</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Disabled</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                                <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning" onclick="resetKey({{ user.id }})">
+                                        <i class="bi bi-arrow-repeat"></i> Reset Key
+                                    </button>
+                                    {% if user.username != 'admin' %}
+                                    <button class="btn btn-sm btn-danger" onclick="deleteUser({{ user.id }})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function createUser() {
+    const username = prompt("Enter username:");
+    if (!username) return;
+    
+    const password = prompt("Enter password:");
+    if (!password) return;
+    
+    const isAdmin = confirm("Make this user an admin?");
+    
+    fetch('/admin/user/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, password, is_admin: isAdmin})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`User created!\n\nLogin Key: ${data.login_key}\n\nSave this key!`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function deleteUser(userId) {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    
+    fetch(`/admin/user/delete/${userId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function resetKey(userId) {
+    if (!confirm("Reset login key for this user?")) return;
+    
+    fetch(`/admin/user/reset-key/${userId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`New login key: ${data.new_key}\n\nSave this key!`);
+            location.reload();
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error);
+    });
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Copied to clipboard!');
+    }).catch(() => {
+        alert('Press Ctrl+C to copy');
+    });
+}
+</script>
+{% endblock %}

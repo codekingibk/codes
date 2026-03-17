@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Predictions - Codes{% endblock %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-md-8">
+            <h2 class="mb-2"><i class="bi bi-graph-up-arrow"></i> Daily Football Predictions</h2>
+            <p class="hero-subtle mb-0">A pro-style predictions board with confidence and risk ratings generated from today's game data.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a class="btn btn-light" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-speedometer2"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="prediction-date" class="form-label">Date</label>
+                <input type="date" id="prediction-date" class="form-control">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Markets</label>
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="form-check">
+                        <input class="form-check-input prediction-type" type="checkbox" value="vip" id="type-vip" checked>
+                        <label class="form-check-label" for="type-vip">VIP</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input prediction-type" type="checkbox" value="draw" id="type-draw" checked>
+                        <label class="form-check-label" for="type-draw">Draw</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input prediction-type" type="checkbox" value="correct_score" id="type-cs" checked>
+                        <label class="form-check-label" for="type-cs">Correct Score</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="loadPredictions()">
+                    <i class="bi bi-arrow-repeat"></i> Refresh Predictions
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card stat-primary text-white h-100">
+            <div class="card-body">
+                <h6 class="mb-1">Total Picks</h6>
+                <h3 id="pred-total" class="mb-0">0</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card stat-info text-white h-100">
+            <div class="card-body">
+                <h6 class="mb-1">Average Confidence</h6>
+                <h3 id="pred-confidence" class="mb-0">0%</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card stat-success text-white h-100">
+            <div class="card-body">
+                <h6 class="mb-1">Low Risk Picks</h6>
+                <h3 id="pred-low-risk" class="mb-0">0</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0"><i class="bi bi-stars"></i> Top Picks</h5>
+    </div>
+    <div class="card-body" id="top-picks">
+        <div class="text-muted">No picks yet.</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-table"></i> Predictions Board</h5>
+    </div>
+    <div class="card-body">
+        <div id="predictions-table" class="table-responsive"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getSelectedTypes() {
+    const selected = [];
+    document.querySelectorAll('.prediction-type:checked').forEach(el => selected.push(el.value));
+    return selected;
+}
+
+function getRiskBadgeClass(risk) {
+    if (risk === 'Low') return 'bg-success';
+    if (risk === 'Medium') return 'bg-warning text-dark';
+    return 'bg-danger';
+}
+
+function confidenceBarClass(confidence) {
+    if (confidence >= 82) return 'bg-success';
+    if (confidence >= 68) return 'bg-warning';
+    return 'bg-danger';
+}
+
+function renderTopPicks(picks) {
+    const container = document.getElementById('top-picks');
+    if (!picks || picks.length === 0) {
+        container.innerHTML = '<div class="text-muted">No top picks available.</div>';
+        return;
+    }
+
+    container.innerHTML = picks.map((pick, index) => `
+        <div class="border rounded p-3 mb-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong>#${index + 1} ${pick.match}</strong>
+                <span class="badge ${getRiskBadgeClass(pick.risk)}">${pick.risk} Risk</span>
+            </div>
+            <div class="text-muted small">${pick.market} | ${pick.league}</div>
+            <div class="mt-1">Pick: <strong>${pick.prediction}</strong> | Odds: <strong>${pick.odds || 'N/A'}</strong> | Confidence: <strong>${pick.confidence}%</strong></div>
+        </div>
+    `).join('');
+}
+
+function renderPredictionsTable(items) {
+    const container = document.getElementById('predictions-table');
+
+    if (!items || items.length === 0) {
+        container.innerHTML = '<div class="alert alert-info mb-0">No predictions available for selected filters.</div>';
+        return;
+    }
+
+    let html = `
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Match</th>
+                    <th>Market</th>
+                    <th>Pick</th>
+                    <th>Odds</th>
+                    <th>Confidence</th>
+                    <th>Risk</th>
+                    <th>League</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    items.forEach(item => {
+        html += `
+            <tr>
+                <td><strong>${item.home_team}</strong> vs <strong>${item.away_team}</strong></td>
+                <td>${item.market}</td>
+                <td><strong>${item.prediction}</strong></td>
+                <td>${item.odds || 'N/A'}</td>
+                <td>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar ${confidenceBarClass(item.confidence)}" role="progressbar" style="width: ${item.confidence}%"></div>
+                    </div>
+                    <small>${item.confidence}%</small>
+                </td>
+                <td><span class="badge ${getRiskBadgeClass(item.risk)}">${item.risk}</span></td>
+                <td>${item.league || 'N/A'}</td>
+            </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function loadPredictions() {
+    const selectedTypes = getSelectedTypes();
+    const table = document.getElementById('predictions-table');
+
+    if (selectedTypes.length === 0) {
+        table.innerHTML = '<div class="alert alert-warning mb-0">Select at least one market type.</div>';
+        return;
+    }
+
+    const date = document.getElementById('prediction-date').value;
+    table.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Generating predictions...</p></div>';
+
+    fetch(`/api/predictions/daily?date=${encodeURIComponent(date)}&types=${encodeURIComponent(selectedTypes.join(','))}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                table.innerHTML = `<div class="alert alert-danger mb-0">${data.error}</div>`;
+                return;
+            }
+
+            document.getElementById('pred-total').textContent = data.total || 0;
+            document.getElementById('pred-confidence').textContent = `${data.average_confidence || 0}%`;
+            document.getElementById('pred-low-risk').textContent = data.low_risk_count || 0;
+
+            renderTopPicks(data.top_picks || []);
+            renderPredictionsTable(data.predictions || []);
+        })
+        .catch(error => {
+            table.innerHTML = `<div class="alert alert-danger mb-0">Error loading predictions: ${error}</div>`;
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('prediction-date').value = today;
+    loadPredictions();
+});
+</script>
+{% endblock %}

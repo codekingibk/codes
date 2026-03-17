@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}View All Games{% endblock %}
+
+{% block content %}
+<section class="hero-panel mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-md-8">
+            <h2 class="mb-2"><i class="bi bi-search"></i> Admin Game Viewer</h2>
+            <p class="hero-subtle mb-0">Inspect game data across providers by date and source.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-light">
+                <i class="bi bi-arrow-left"></i> Back to Admin
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-search"></i> Game Viewer (Admin)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="game-date" class="form-label">Date</label>
+                        <input type="date" id="game-date" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="game-source" class="form-label">Source</label>
+                        <select id="game-source" class="form-select">
+                            <option value="all">All Sources</option>
+                            <option value="primeodds">PrimeOdds Only</option>
+                            <option value="vvip_api">VVIP API Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="fetchAllGames()">
+                            <i class="bi bi-search"></i> Fetch
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="games-display">
+                    <div class="text-center text-muted">
+                        Select date and click Fetch to view games
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Set today's date when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('game-date').value = today;
+});
+
+function fetchAllGames() {
+    const date = document.getElementById('game-date').value;
+    const source = document.getElementById('game-source').value;
+    const display = document.getElementById('games-display');
+    
+    display.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div><p>Fetching games...</p></div>';
+    
+    fetch(`/admin/games/fetch?type=${source}&date=${date}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                display.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                return;
+            }
+            
+            let html = '';
+            
+            // PrimeOdds games
+            if (data.correct_score || data.draw || data.vip) {
+                html += '<h5 class="mt-3">PrimeOdds Games</h5>';
+                
+                if (data.correct_score && data.correct_score.length > 0) {
+                    html += '<h6>Correct Score VIP</h6>' + renderPrimeOddsGames(data.correct_score);
+                }
+                
+                if (data.draw && data.draw.length > 0) {
+                    html += '<h6 class="mt-3">Draw VIP</h6>' + renderPrimeOddsGames(data.draw);
+                }
+                
+                if (data.vip && data.vip.length > 0) {
+                    html += '<h6 class="mt-3">Regular VIP</h6>' + renderPrimeOddsGames(data.vip);
+                }
+            }
+            
+            // VVIP API games
+            if (data.vvip || data.vip_games) {
+                html += '<h5 class="mt-4">VVIP API Games</h5>';
+                
+                if (data.vvip && data.vvip.length > 0) {
+                    html += '<h6>VVIP Packages</h6>' + renderVVIPPackages(data.vvip);
+                }
+                
+                if (data.vip_games && data.vip_games.length > 0) {
+                    html += '<h6 class="mt-3">VIP Games</h6>' + renderVIPGames(data.vip_games);
+                }
+            }
+            
+            if (html === '') {
+                html = '<div class="alert alert-info">No games found for this date</div>';
+            }
+            
+            display.innerHTML = html;
+        })
+        .catch(error => {
+            display.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+        });
+}
+
+function renderPrimeOddsGames(games) {
+    if (!games || games.length === 0) return '<div class="alert alert-info">No games</div>';
+    
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Home</th>
+                        <th>Away</th>
+                        <th>Prediction</th>
+                        <th>Odds</th>
+                        <th>League</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    games.forEach(game => {
+        html += `
+            <tr>
+                <td>${game.home_team || 'N/A'}</td>
+                <td>${game.away_team || 'N/A'}</td>
+                <td><strong>${game.prediction || 'N/A'}</strong></td>
+                <td>${game.odds || 'N/A'}</td>
+                <td>${game.league || 'N/A'}</td>
+                <td>${game.status || 'Pending'}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table></div>';
+    return html;
+}
+
+function renderVVIPPackages(packages) {
+    if (!packages || packages.length === 0) return '<div class="alert alert-info">No packages</div>';
+    
+    let html = '';
+    
+    packages.forEach(pkg => {
+        html += `
+            <div class="card mb-2">
+                <div class="card-header bg-primary text-white">
+                    <strong>Package #${pkg.id || 'N/A'}</strong> - GHS ${pkg.price || '0'}
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Booking Codes:</strong><br>
+                        ${pkg.sporty_booking ? `Sportybet: <code>${pkg.sporty_booking}</code><br>` : ''}
+                        ${pkg.onex_booking ? `1XBet: <code>${pkg.onex_booking}</code><br>` : ''}
+                        ${pkg.msport_booking ? `MSport: <code>${pkg.msport_booking}</code><br>` : ''}
+                        ${pkg.betway_booking ? `Betway: <code>${pkg.betway_booking}</code>` : ''}
+                    </div>
+                    
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Home</th>
+                                <th>Away</th>
+                                <th>League</th>
+                                <th>Pick</th>
+                                <th>Odds</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pkg.games ? pkg.games.map(game => `
+                                <tr>
+                                    <td>${game.home_team || 'N/A'}</td>
+                                    <td>${game.away_team || 'N/A'}</td>
+                                    <td>${game.league || 'N/A'}</td>
+                                    <td>${game.option || 'N/A'}</td>
+                                    <td>${game.odds || 'N/A'}</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="5" class="text-center">No games in package</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    });
+    
+    return html;
+}
+
+function renderVIPGames(games) {
+    if (!games || games.length === 0) return '<div class="alert alert-info">No games</div>';
+    
+    let html = `
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Home</th>
+                        <th>Away</th>
+                        <th>League</th>
+                        <th>Odds</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    games.forEach(game => {
+        html += `
+            <tr>
+                <td>${game.home_team || 'N/A'}</td>
+                <td>${game.away_team || 'N/A'}</td>
+                <td>${game.league || 'N/A'}</td>
+                <td>${game.odds || 'N/A'}</td>
+                <td>${game.status || 'Pending'}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table></div>';
+    return html;
+}
+</script>
+{% endblock %}
